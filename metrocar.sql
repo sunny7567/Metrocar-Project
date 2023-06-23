@@ -47,3 +47,84 @@ LEFT JOIN ride_requests as r
 USING(user_id)
 INNER JOIN transactions as t 
 USING (ride_id)
+
+
+-- How many unique users requested a ride through the Metrocar app?
+SELECT COUNT ( DISTINCT user_id)
+FROM ride_requests
+
+-- How many unique users completed a ride through the Metrocar app?
+SELECT COUNT( DISTINCT CASE WHEN dropoff_ts IS NOT NULL THEN user_id END )
+FROM ride_requests
+
+-- Of the users that signed up on the app, what percentage these users requested a ride?
+SELECT 1/1.0 * COUNT(DISTINCT r.user_id ) / COUNT(DISTINCT s.user_id) 
+FROM signups as s
+LEFT JOIN ride_requests as r
+USING (user_id)
+
+-- Of the users that signed up on the app, what percentage these users completed a ride?
+ SELECT 1/1.0 * COUNT( DISTINCT CASE WHEN dropoff_ts IS NOT NULL THEN user_id END )  / COUNT(DISTINCT s.user_id ) 
+FROM signups as s
+LEFT JOIN ride_requests as r
+USING (user_id)
+
+-- Using the percent of previous approach, what are the user-level conversion rates for the first 3 stages of the funnel (app download to signup and signup to ride requested)?
+
+SELECT COUNT( DISTINCT app_download_key) as user_download,
+       COUNT( DISTINCT s.user_id) as user_signup,
+       COUNT( DISTINCT r.user_id) as user_riderequest
+FROM app_downloads as a
+LEFT JOIN signups as s
+ON a.app_download_key = s.session_id
+LEFT JOIN ride_requests as r
+USING (user_id) 
+
+SELECT 1/1.0 * user_signup / user_download as singup,
+        1/1.0 * user_riderequest / user_signup as request
+FROM t1
+
+
+-- Using the percent of top approach, what are the user-level conversion rates for the first 3 stages of the funnel (app download to signup and signup to ride requested)?
+
+WITH t1 AS (SELECT COUNT( DISTINCT app_download_key) as user_download,
+       COUNT( DISTINCT s.user_id) as user_signup,
+       COUNT( DISTINCT r.user_id) as user_riderequest
+FROM app_downloads as a
+LEFT JOIN signups as s
+ON a.app_download_key = s.session_id
+LEFT JOIN ride_requests as r
+USING (user_id) )
+
+SELECT 1/1.0 * user_signup / user_download as singup,
+        1/1.0 * user_riderequest / user_download as request
+FROM t1
+
+-- Using the percent of previous approach, what are the user-level conversion rates for the following 3 stages of the funnel? 1. signup, 2. ride requested, 3. ride completed
+WITH t1 AS (SELECT COUNT( DISTINCT CASE WHEN dropoff_ts IS NOT NULL THEN user_id END ) as user_complted,
+       COUNT( DISTINCT s.user_id) as user_signup,
+       COUNT( DISTINCT r.user_id) as user_riderequest
+FROM app_downloads as a
+LEFT JOIN signups as s
+ON a.app_download_key = s.session_id
+LEFT JOIN ride_requests as r
+USING (user_id) )
+
+SELECT 1/1.0 * user_riderequest / user_signup as singup,
+        1/1.0 * user_complted / user_riderequest as request
+FROM t1
+
+-- Using the percent of top approach, what are the user-level conversion rates for the following 3 stages of the funnel? 1. signup, 2. ride requested, 3. ride completed (hint: signup is the top of this funnel)
+
+WITH t1 AS (SELECT COUNT( DISTINCT CASE WHEN dropoff_ts IS NOT NULL THEN user_id END ) as user_complted,
+       COUNT( DISTINCT s.user_id) as user_signup,
+       COUNT( DISTINCT r.user_id) as user_riderequest
+FROM app_downloads as a
+LEFT JOIN signups as s
+ON a.app_download_key = s.session_id
+LEFT JOIN ride_requests as r
+USING (user_id) )
+
+SELECT 1/1.0 * user_riderequest / user_signup as singup,
+        1/1.0 * user_complted / user_signup as request
+FROM t1
